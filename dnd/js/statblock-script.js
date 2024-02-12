@@ -41,18 +41,14 @@ var mon = {
     isLair: false,
     lairDescription: "",
     lairDescriptionEnd: "",
-    isMythic: false,
-    mythicDescription: "",
     isRegional: false,
     regionalDescription: "",
     regionalDescriptionEnd: "",
     properties: [],
     abilities: [],
     actions: [],
-    bonusActions: [],
     reactions: [],
     legendaries: [],
-    mythics: [],
     lairs: [],
     regionals: [],
     sthrows: [],
@@ -67,13 +63,6 @@ var mon = {
     doubleColumns: false,
     separationPoint: 1
 };
-
-const LEGACY_MARKDOWN = false
-const V3_MARKDOWN = true
-const LEGENDARY = "LEGENDARY"
-const MYTHIC = "MYTHIC"
-const REGIONAL = "REGIONAL"
-const LAIR = "LAIR"
 
 // Save function
 var TrySaveFile = () => {
@@ -99,8 +88,8 @@ function TryPrint() {
 }
 
 // View as image function
-function TryImage() {
-    domtoimage.toBlob(document.getElementById("stat-block"))
+function TryImage(dpi) {
+    domtoimage.toBlob(document.getElementById("stat-block"), {dpi: dpi})
         .then(function (blob) {
             window.saveAs(blob, mon.name.toLowerCase() + ".png");
         });
@@ -146,13 +135,10 @@ var SavedData = {
 // Update the main stat block
 function UpdateStatblock(moveSeparationPoint) {
     // Set Separation Point
-    let separationMax = mon.abilities.length + mon.actions.length + mon.bonusActions.length + mon.reactions.length - 1;
+    let separationMax = mon.abilities.length + mon.actions.length + mon.reactions.length - 1;
 
     if (mon.isLegendary)
         separationMax += (mon.legendaries.length == 0 ? 1 : mon.legendaries.length);
-
-    if (mon.isMythic)
-        separationMax += (mon.mythics.length == 0 ? 1 : mon.mythics.length);
 
     if (mon.isLair)
         separationMax += (mon.lairs.length == 0 ? 1 : mon.lairs.length);
@@ -220,16 +206,11 @@ function UpdateStatblock(moveSeparationPoint) {
 
     if (mon.abilities.length > 0) AddToTraitList(traitsHTML, mon.abilities);
     if (mon.actions.length > 0) AddToTraitList(traitsHTML, mon.actions, "<h3>Actions</h3>");
-    if (mon.bonusActions.length > 0) AddToTraitList(traitsHTML, mon.bonusActions, "<h3>Bonus Actions</h3>");
     if (mon.reactions.length > 0) AddToTraitList(traitsHTML, mon.reactions, "<h3>Reactions</h3>");
     if (mon.isLegendary && (mon.legendaries.length > 0 || mon.legendariesDescription.length > 0))
         AddToTraitList(traitsHTML, mon.legendaries, mon.legendariesDescription == "" ?
             "<h3>Legendary Actions</h3><div class='property-block'></div>" :
             ["<h3>Legendary Actions</h3><div class='property-block'>", StringFunctions.FormatString(ReplaceTags(StringFunctions.RemoveHtmlTags(mon.legendariesDescription))), "</div></br>"], true);
-    if (mon.isMythic && mon.isLegendary && (mon.mythics.length > 0 || mon.mythicDescription.length > 0))
-        AddToTraitList(traitsHTML, mon.mythics, mon.mythicDescription == "" ?
-            "<h3>Mythic Actions</h3><div class='property-block'></div>" :
-            ["<h3>Mythic Actions</h3><div class='property-block'>", StringFunctions.FormatString(ReplaceTags(StringFunctions.RemoveHtmlTags(mon.mythicDescription))), "</div></br>"], true);    
     if (mon.isLair && mon.isLegendary && (mon.lairs.length > 0 || mon.lairDescription.length > 0 || mon.lairDescriptionEnd.length > 0)) {
         AddToTraitList(traitsHTML, mon.lairs, mon.lairDescription == "" ?
             "<h3>Lair Actions</h3><div class='property-block'></div>" :
@@ -410,160 +391,67 @@ function ReplaceTags(desc) {
 // Homebrewery/GM Binder markdown
 function TryMarkdown() {
     let markdownWindow = window.open();
-    let markdown = ['<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>', mon.name, '</title><link rel="shortcut icon" type="image/x-icon" href="./dndimages/favicon.ico" /></head><body>'];
-    
-    markdown.push(
-        "<h2>Homebrewery V3</h2>",
-        BuildMarkdown(V3_MARKDOWN),
-        "<h2>Homebrewery (Legacy)/GM Binder Markdown</h2>",
-        BuildMarkdown(LEGACY_MARKDOWN));
-
-
-    markdown.push("</body></html>");
-
-    markdownWindow.document.write(markdown.join(""));
-}
-
-function BuildMarkdown(isV3Markdown) {
-    let markdownLines = [];
-
-    if (isV3Markdown) {
-        markdownLines.push(`{{monster,frame${mon.doubleColumns ? ",wide" : ""}`);
-    }
-    else {
-        if (mon.doubleColumns) {
-            markdownLines.push("___");  
-        }
-        markdownLines.push("___");
-    }
-
-    markdownLines.push(
-        `## ${mon.name}`,
-        `*${StringFunctions.StringCapitalize(mon.size)} ${mon.type}${mon.tag != "" ? ` (${mon.tag})`  : ""}, ${mon.alignment}*`,
-        `___`,
-        PrintMarkdownProperty(isV3Markdown, "Armor Class", StringFunctions.FormatString(StringFunctions.GetArmorData())),
-        PrintMarkdownProperty(isV3Markdown, "Hit Points", StringFunctions.GetHP()), 
-        PrintMarkdownProperty(isV3Markdown, "Speed", StringFunctions.GetSpeed()),
-        `___`);
-    AddMarkdownAttributesTable(markdownLines);
-    markdownLines.push("___");
+    let markdown = ['<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>', mon.name, '</title><link rel="shortcut icon" type="image/x-icon" href="./dndimages/favicon.ico" /></head><body><h2>Homebrewery/GM Binder Markdown</h2><code>', mon.doubleColumns ? "___<br>___<br>" : "___<br>", '> ## ', mon.name, '<br>>*', StringFunctions.StringCapitalize(mon.size), ' ', mon.type];
+    if (mon.tag != "")
+        markdown.push(' (', mon.tag, ')');
+    markdown.push(', ', mon.alignment, '*<br>>___<br>> - **Armor Class** ', StringFunctions.FormatString(StringFunctions.GetArmorData()), '<br>> - **Hit Points** ', StringFunctions.GetHP(), '<br>> - **Speed** ', StringFunctions.GetSpeed(), "<br>>___<br>>|STR|DEX|CON|INT|WIS|CHA|<br>>|:---:|:---:|:---:|:---:|:---:|:---:|<br>>|",
+        mon.strPoints, " (", StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.strPoints)), ")|",
+        mon.dexPoints, " (", StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.dexPoints)), ")|",
+        mon.conPoints, " (", StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.conPoints)), ")|",
+        mon.intPoints, " (", StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.intPoints)), ")|",
+        mon.wisPoints, " (", StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.wisPoints)), ")|",
+        mon.chaPoints, " (", StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.chaPoints)), ")|<br>>___<br>");
 
     let propertiesDisplayArr = StringFunctions.GetPropertiesDisplayArr();
 
     for (let index = 0; index < propertiesDisplayArr.length; index++) {
-        markdownLines.push(
-            PrintMarkdownProperty(isV3Markdown, 
-            propertiesDisplayArr[index].name, 
-            Array.isArray(propertiesDisplayArr[index].arr) ? propertiesDisplayArr[index].arr.join(", ") : propertiesDisplayArr[index].arr));
+        markdown.push('> - **', propertiesDisplayArr[index].name, "** ",
+            (Array.isArray(propertiesDisplayArr[index].arr) ? propertiesDisplayArr[index].arr.join(", ") : propertiesDisplayArr[index].arr),
+            "<br>");
     }
 
-    markdownLines.push(
-        PrintMarkdownProperty(isV3Markdown, "Challenge", mon.cr == "*" ? mon.customCr : `${mon.cr} (${data.crs[mon.cr].xp} XP)`),
-        "___");
+    if (mon.cr == "*")
+        markdown.push("> - **Challenge** ", mon.customCr, "<br>>___");
+    else
+        markdown.push("> - **Challenge** ", mon.cr, " (", data.crs[mon.cr].xp, " XP)<br>>___");
 
-    AddMarkdownTraitSection(markdownLines, isV3Markdown, null, mon.abilities);
-    AddMarkdownTraitSection(markdownLines, isV3Markdown, "Actions", mon.actions);
-    AddMarkdownTraitSection(markdownLines, isV3Markdown, "Bonus Actions", mon.bonusActions);
-    AddMarkdownTraitSection(markdownLines, isV3Markdown, "Reactions", mon.reactions);
-
+    if (mon.abilities.length > 0) markdown.push("<br>", GetTraitMarkdown(mon.abilities, false));
+    if (mon.actions.length > 0) markdown.push("<br>> ### Actions<br>", GetTraitMarkdown(mon.actions, false));
+    if (mon.reactions.length > 0) markdown.push("<br>> ### Reactions<br>", GetTraitMarkdown(mon.reactions, false));
     if (mon.isLegendary) {
-        AddMarkdownTraitSection(markdownLines, isV3Markdown, "Legendary Actions", mon.legendaries, mon.legendariesDescription, null, LEGENDARY);
-        if (mon.isMythic) AddMarkdownTraitSection(markdownLines, isV3Markdown, "Mythic Actions", mon.mythics, mon.mythicDescription, null, MYTHIC);
-        if (mon.isLair) AddMarkdownTraitSection(markdownLines, isV3Markdown, "Lair Actions", mon.lairs, mon.lairDescription, mon.lairDescriptionEnd, LAIR);
-        if (mon.isRegional) AddMarkdownTraitSection(markdownLines, isV3Markdown, "Regional Effects", mon.regionals, mon.regionalDescription, mon.regionalDescriptionEnd, REGIONAL);
+        markdown.push("<br>> ### Legendary Actions<br>> ", ReplaceTags(mon.legendariesDescription));
+        if (mon.legendaries.length > 0) markdown.push("<br>><br>", GetTraitMarkdown(mon.legendaries, true));
+    }
+    if (mon.isLair && mon.isLegendary) {
+        markdown.push("<br>> ### Lair Actions<br>> ", ReplaceTags(mon.lairDescription));
+        if (mon.lairs.length > 0) markdown.push("<br>><br>", GetTraitMarkdown(mon.lairs, false, true));
+        markdown.push("<br>><br>>", ReplaceTags(mon.lairDescriptionEnd));
+    }
+    if (mon.isRegional && mon.isLegendary) {
+        markdown.push("<br>><br>> ### Regional Effects<br>> ", ReplaceTags(mon.regionalDescription));
+        if (mon.regionals.length > 0) markdown.push("<br>><br>", GetTraitMarkdown(mon.regionals, false, true));
+        markdown.push("<br>><br>>", ReplaceTags(mon.regionalDescriptionEnd));
     }
 
-    if (isV3Markdown) {
-        markdownLines.push("}}");
-    }
-    else 
-    {
-        LegacyMarkdownFormating(markdownLines);
-    }
+    markdown.push("</code></body></html>")
 
-    return ConvertMarkdownToHtmlString(markdownLines);
+    markdownWindow.document.write(markdown.join(""));
 }
 
-function PrintMarkdownProperty(isV3Markdown, name, value) {
-    if (isV3Markdown) {
-        return `**${name}** :: ${value}`;
-    }
-    else {
-        return `- **${name}** ${value}`;
-    }
-}
-
-function AddMarkdownAttributesTable(markdown) {
-    markdown.push(
-        `|STR|DEX|CON|INT|WIS|CHA|`,
-        `|:---:|:---:|:---:|:---:|:---:|:---:|`,
-        `|${mon.strPoints} (${StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.strPoints))})|` +
-        `${mon.dexPoints} (${StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.dexPoints))})|` +
-        `${mon.conPoints} (${StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.conPoints))})|` +
-        `${mon.intPoints} (${StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.intPoints))})|` +
-        `${mon.wisPoints} (${StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.wisPoints))})|` +
-        `${mon.chaPoints} (${StringFunctions.BonusFormat(MathFunctions.PointsToBonus(mon.chaPoints))})|`);
-}
-
-function AddMarkdownTraitSection(markdownLines, isV3Markdown, sectionTitle, traitArr, sectionHeader = null, sectionEnd = null, formatOptions = "") {
-    if (traitArr.length == 0 && !sectionHeader && !sectionEnd)
-    {
-        return;
-    }
-    
-    let traitDiv = isV3Markdown ? ":" : "";
-    let legendary = formatOptions === LEGENDARY;
-    let lairOrRegional = formatOptions === LAIR || formatOptions === REGIONAL;
-
-    if (sectionTitle) markdownLines.push(`### ${sectionTitle}`);
-    if (sectionHeader) markdownLines.push(ReplaceTags(sectionHeader), traitDiv);
-
-    if (traitArr.length != 0) {
-        for (let index = 0; index < traitArr.length; index++) {
-            let desc = ReplaceTags(traitArr[index].desc)
-                .replace(/(\r\n|\r|\n)\s*(\r\n|\r|\n)/g, '\n>\n')
-                .replace(/(\r\n|\r|\n)>/g, `\&lt;br&gt;<br>`)
-                .replace(/(\r\n|\r|\n)/g, `\&lt;br&gt;<br> &amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;`);
-            
-            let traitString = (legendary ? "**" : (lairOrRegional ? "* " : "***")) +
+function GetTraitMarkdown(traitArr, legendary = false, lairOrRegional = false) {
+    let markdown = [];
+    for (let index = 0; index < traitArr.length; index++) {
+        let desc = ReplaceTags(traitArr[index].desc)
+            .replace(/(\r\n|\r|\n)\s*(\r\n|\r|\n)/g, '\n>\n')
+            .replace(/(\r\n|\r|\n)>/g, '\&lt;br&gt;<br>>')
+            .replace(/(\r\n|\r|\n)/g, '\&lt;br&gt;<br>> &amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;');
+        markdown.push("> " +
+            (legendary ? "**" : (lairOrRegional ? "* " : "***")) +
             (lairOrRegional ? "" : traitArr[index].name) +
             (legendary ? ".** " : lairOrRegional ? "" : (".*** ")) +
-            desc;
-
-            traitString.split("<br>").forEach(line => markdownLines.push(line))
-            if (index + 1 < traitArr.length)
-            {
-                markdownLines.push(traitDiv);
-            }
-        }
+            desc);
     }
-
-    if (sectionEnd && traitArr.length != 0) markdownLines.push(traitDiv);
-    if (sectionEnd) markdownLines.push(ReplaceTags(sectionEnd));
-}
-
-function LegacyMarkdownFormating(markdownLines) {
-    // Append each line with a >
-    // Skip first 1 or 2 lines depending if its wide frame or not
-    let startingIndex = mon.doubleColumns ? 2 : 1; 
-
-    for (let index = startingIndex; index < markdownLines.length; index++)
-    {
-        markdownLines[index] = `> ${markdownLines[index]}`;
-    }
-}
-
-function ConvertMarkdownToHtmlString(markdownLines) {
-    // Add line breaks and code tags
-    let builtLines = [];
-    
-    markdownLines.forEach(line => {
-        line.split("<br>").forEach(subLine => {
-            builtLines.push(`${subLine}<br>`);
-        });
-    });
-
-    return `<code>${builtLines.join("")}</code>`
+    return markdown.join("<br>><br>");
 }
 
 // Functions for form-setting
@@ -643,26 +531,20 @@ var FormFunctions = {
         $("#plural-name-input").val(mon.pluralName);
         this.MakeDisplayList("abilities", false, true);
         this.MakeDisplayList("actions", false, true);
-        this.MakeDisplayList("bonusActions", false, true);
         this.MakeDisplayList("reactions", false, true);
         this.MakeDisplayList("legendaries", false, true);
-        this.MakeDisplayList("mythics", false, true);
         this.MakeDisplayList("lairs", false, true);
         this.MakeDisplayList("regionals", false, true);
 
-        // Is Legendary?	
+        // Is Legendary?
         $("#is-legendary-input").prop("checked", mon.isLegendary);
         this.ShowHideLegendaryCreature();
 
-        // Is Mythic?	
-        $("#is-mythic-input").prop("checked", mon.isMythic);
-        this.ShowHideMythicCreature();
-
-        // Is Lair?	
+        // Is Lair?
         $("#has-lair-input").prop("checked", mon.isLair);
         this.ShowHideLair();
 
-        // Is Regional?	
+        // Is Regional?
         $("#has-regional-input").prop("checked", mon.isRegional);
         this.ShowHideRegional();
 
@@ -731,23 +613,14 @@ var FormFunctions = {
     ShowHideLegendaryCreature: function () {
         if ($("#is-legendary-input:checked").val()) {
             $("#add-legendary-button, #legendary-actions-form").show();
-            if ($("#is-mythic-input:checked").val())
-                $("#add-mythic-button, #mythic-actions-form").show();
             if ($("#has-lair-input:checked").val())
                 $("#add-lair-button, #lair-actions-form").show();
             if ($("#has-regional-input:checked").val())
                 $("#add-regional-button, #regional-actions-form").show();
         } else {
             $("#add-legendary-button, #legendary-actions-form").hide();
-            $("#add-mythic-button, #mythic-actions-form").hide();
             $("#add-lair-button, #add-regional-button, #lair-actions-form, #regional-actions-form").hide();
         }
-    },
-
-    ShowHideMythicCreature: function () {
-        $("#is-mythic-input:checked").val() ?
-            $("#add-mythic-button, #mythic-actions-form").show() :
-            $("#add-mythic-button, #mythic-actions-form").hide();
     },
 
     ShowHideLair: function () {
@@ -795,11 +668,6 @@ var FormFunctions = {
     // For setting the legendary action description
     SetLegendaryDescriptionForm: function () {
         $("#legendaries-descsection-input").val(mon.legendariesDescription);
-    },
-
-    // For setting the mythic action description
-    SetMythicDescriptionForm: function () {
-        $("#mythic-descsection-input").val(mon.mythicDescription);
     },
 
     // For setting the lair action description
@@ -1012,12 +880,6 @@ var InputFunctions = {
         FormFunctions.SetLegendaryDescriptionForm();
     },
 
-    // Reset mythic description to default
-    MythicDescriptionDefaultInput: function () {
-        GetVariablesFunctions.MythicDescriptionDefault();
-        FormFunctions.SetMythicDescriptionForm();
-    },
-
     // Reset lair description to default
     LairDescriptionDefaultInput: function () {
         GetVariablesFunctions.LairDescriptionDefault();
@@ -1078,7 +940,7 @@ var GetVariablesFunctions = {
         mon.speedDesc = $("#custom-speed-prompt").val();
         mon.customSpeed = $("#custom-speed-input").prop("checked");
 
-        // Stats	
+        // Stats
         mon.strPoints = $("#str-input").val();
         mon.dexPoints = $("#dex-input").val();
         mon.conPoints = $("#con-input").val();
@@ -1110,11 +972,6 @@ var GetVariablesFunctions = {
         mon.isLegendary = $("#is-legendary-input").prop("checked");
         if (mon.isLegendary)
             mon.legendariesDescription = $("#legendaries-descsection-input").val().trim();
-
-        // Mythics
-        mon.isMythic = $("#is-mythic-input").prop("checked");
-        if (mon.isMythic)
-            mon.mythicDescription = $("#mythic-descsection-input").val().trim();
 
         // Lair
         mon.isLair = $("#has-lair-input").prop("checked");
@@ -1347,10 +1204,6 @@ var GetVariablesFunctions = {
             }
         }
 
-        // This
-        mon.shortName = "";
-        mon.pluralName = "";
-
         // Legendary?
         mon.isLegendary = Array.isArray(preset.legendary_actions);
         if (preset.legendary_desc == null || preset.legendary_desc.length == 0)
@@ -1358,14 +1211,6 @@ var GetVariablesFunctions = {
         else
             mon.legendariesDescription = preset.legendary_desc;
         FormFunctions.SetLegendaryDescriptionForm();
-
-        // Mythic?
-        mon.isMythic = Array.isArray(preset.mythic_actions);
-        if (preset.mythicy_desc == null || preset.mythic_desc.length == 0)
-            this.MythicDescriptionDefault();
-        else
-            mon.legendariesDescription = preset.mythic_desc;
-        FormFunctions.SetMythicDescriptionForm();
 
         // Lair?
         mon.isLair = Array.isArray(preset.lair_actions);
@@ -1395,18 +1240,14 @@ var GetVariablesFunctions = {
         // Abilities
         mon.abilities = [];
         mon.actions = [];
-        mon.bonusActions = [];
         mon.reactions = [];
         mon.legendaries = [];
-        mon.mythics = []
         mon.lairs = [];
         mon.regionals = [];
         let abilitiesPresetArr = preset.special_abilities,
             actionsPresetArr = preset.actions,
-            bonusActionsPresetArr = preset.bonusActions,
             reactionsPresetArr = preset.reactions,
             legendariesPresetArr = preset.legendary_actions,
-            mythicPresetArr = preset.mythic_actions,
             lairsPresetArr = preset.lair_actions,
             regionalsPresetArr = preset.regional_actions;
 
@@ -1420,12 +1261,9 @@ var GetVariablesFunctions = {
 
         AbilityPresetLoop(abilitiesPresetArr, "abilities");
         AbilityPresetLoop(actionsPresetArr, "actions");
-        AbilityPresetLoop(bonusActionsPresetArr, "bonusActions");
         AbilityPresetLoop(reactionsPresetArr, "reactions");
         if (mon.isLegendary)
             AbilityPresetLoop(legendariesPresetArr, "legendaries");
-        if (mon.isMythic)
-            AbilityPresetLoop(mythicPresetArr, "mythics");
         if (mon.isLair)
             AbilityPresetLoop(lairsPresetArr, "lairs");
         if (mon.isRegional)
@@ -1524,7 +1362,7 @@ var GetVariablesFunctions = {
     },
 
 
-    // Add abilities, actions, bonus actions, reactions, legendary actions, etc
+    // Add abilities, actions, reactions, and legendary actions
 
     AddAbility: function (arrName, abilityName, abilityDesc) {
         let arr = mon[arrName];
@@ -1610,31 +1448,31 @@ var GetVariablesFunctions = {
 
     // Return the default legendary description
     LegendaryDescriptionDefault: function () {
+        let monsterName = name.toLowerCase();
         mon.legendariesDescription = "The " + mon.name.toLowerCase() + " can take 3 legendary actions, choosing from the options below. Only one legendary action option can be used at a time and only at the end of another creature's turn. The " + mon.name.toLowerCase() + " regains spent legendary actions at the start of its turn.";
-    },
-
-    // Return the default mythic description
-    MythicDescriptionDefault: function () {
-        mon.mythicDescription = "If the " + mon.name.toLowerCase() + "'s mythic trait is active, it can use the options below as legendary actions for 1 hour after using {Some Ability}.";
     },
 
     // Return the default lair description
     LairDescriptionDefault: function () {
+        let monsterName = name.toLowerCase();
         mon.lairDescription = "When fighting inside its lair, the " + mon.name.toLowerCase() + " can invoke the ambient magic to take lair actions. On initiative count 20 (losing initiative ties), the " + mon.name.toLowerCase() + " can take one lair action to cause one of the following effects:";
     },
 
     // Return the default lair end description
     LairDescriptionEndDefault: function () {
+        let monsterName = name.toLowerCase();
         mon.lairDescriptionEnd = "The " + mon.name.toLowerCase() + " can't repeat an effect until they have all been used, and it can't use the same effect two rounds in a row.";
     },
 
     // Return the default regional description
     RegionalDescriptionDefault: function () {
+        let monsterName = name.toLowerCase();
         mon.regionalDescription = "The region containing the " + mon.name.toLowerCase() + "'s lair is warped by the creature's presence, which creates one or more of the following effects:";
     },
 
     // Return the default regional end description
     RegionalDescriptionEndDefault: function () {
+        let monsterName = name.toLowerCase();
         mon.regionalDescriptionEnd = "If the " + mon.name.toLowerCase() + " dies, the first two effects fade over the course of 3d10 days.";
     }
 }
@@ -2014,7 +1852,6 @@ $(function () {
 
 function Populate() {
     FormFunctions.SetLegendaryDescriptionForm();
-    FormFunctions.SetMythicDescriptionForm();
     FormFunctions.SetLairDescriptionForm();
     FormFunctions.SetLairDescriptionEndForm();
     FormFunctions.SetRegionalDescriptionForm();
