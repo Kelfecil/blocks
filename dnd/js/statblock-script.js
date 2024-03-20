@@ -99,12 +99,11 @@ function TryPrint() {
 }
 
 // View as image function
-function TryImage() {
-    domtoimage.toBlob(document.getElementById("stat-block"))
+function TryImage(dpi) {
+    domtoimage.toBlob(document.getElementById("stat-block"), {dpi: dpi})
         .then(function (blob) {
             window.saveAs(blob, mon.name.toLowerCase() + ".png");
         });
-}
 
 // Update the main stat block from form variables
 function UpdateBlockFromVariables(moveSeparationPoint) {
