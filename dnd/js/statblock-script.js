@@ -104,7 +104,7 @@ function TryImage(dpi) {
         .then(function (blob) {
             window.saveAs(blob, mon.name.toLowerCase() + ".png");
         });
-
+}
 // Update the main stat block from form variables
 function UpdateBlockFromVariables(moveSeparationPoint) {
     GetVariablesFunctions.GetAllVariables();
